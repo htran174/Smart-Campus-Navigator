@@ -1,146 +1,160 @@
-"""
-======================================================================================================
-
-                                            algro.py
-                                        Created by Hien Tran
-                            Holds all the algrothims that is needed for project
-
-======================================================================================================
-"""
+# algro.py
 
 import heapq
 
-# -----------------------------
+# =====================
 # Dijkstra's Algorithm
-# -----------------------------
-def dijkstra(graph, source):
+# =====================
+
+def dijkstra(graph, start, end):
     n = len(graph)
-    dist = [float('inf')] * n
-    prev = [None] * n
-    dist[source] = 0
-    pq = [(0, source)]
+    dist = {node: float('inf') for node in graph}
+    prev = {node: None for node in graph}
+
+    dist[start] = 0
+    pq = [(0, start)]
 
     while pq:
         current_dist, u = heapq.heappop(pq)
+
+        if u == end:
+            break
+
         if current_dist > dist[u]:
             continue
+
         for v, weight in graph[u]:
             if dist[u] + weight < dist[v]:
                 dist[v] = dist[u] + weight
                 prev[v] = u
                 heapq.heappush(pq, (dist[v], v))
-    return dist, prev
 
-# -----------------------------
-# Prim's Algorithm
-# -----------------------------
+    # Rebuild path
+    path = []
+    at = end
+    if dist[end] == float('inf'):
+        return None, None
+
+    while at is not None:
+        path.append(at)
+        at = prev[at]
+
+    path.reverse()
+    return path, dist[end]
+
+# =====================
+# Prim's Algorithm (MST)
+# =====================
+
 def prim(graph, n):
-    visited = [False] * n
-    min_heap = [(0, 0)]
+    visited = set()
+    mst_edges = []
     total_cost = 0
 
-    while min_heap:
-        cost, u = heapq.heappop(min_heap)
-        if visited[u]:
+    min_heap = [(0, 0, -1)]  # (cost, current_node, parent_node)
+
+    while min_heap and len(visited) < n:
+        cost, u, parent = heapq.heappop(min_heap)
+
+        if u in visited:
             continue
-        visited[u] = True
-        total_cost += cost
+
+        visited.add(u)
+        if parent != -1:
+            mst_edges.append((parent, u, cost))
+            total_cost += cost
 
         for v, weight in graph[u]:
-            if not visited[v]:
-                heapq.heappush(min_heap, (weight, v))
+            if v not in visited:
+                heapq.heappush(min_heap, (weight, v, u))
 
-    return total_cost
+    return total_cost, mst_edges
 
-# -----------------------------
-# Kruskal's Algorithm
-# -----------------------------
-def find(parent, x):
-    if parent[x] != x:
-        parent[x] = find(parent, parent[x])
-    return parent[x]
+# =====================
+# Kruskal's Algorithm (MST)
+# =====================
 
-def union(parent, rank, x, y):
-    rootX = find(parent, x)
-    rootY = find(parent, y)
-    if rootX != rootY:
-        if rank[rootX] < rank[rootY]:
-            parent[rootX] = rootY
-        elif rank[rootX] > rank[rootY]:
-            parent[rootY] = rootX
+def find(parent, u):
+    if parent[u] != u:
+        parent[u] = find(parent, parent[u])
+    return parent[u]
+
+def union(parent, rank, u, v):
+    root_u = find(parent, u)
+    root_v = find(parent, v)
+
+    if root_u != root_v:
+        if rank[root_u] < rank[root_v]:
+            parent[root_u] = root_v
+        elif rank[root_u] > rank[root_v]:
+            parent[root_v] = root_u
         else:
-            parent[rootY] = rootX
-            rank[rootX] += 1
+            parent[root_v] = root_u
+            rank[root_u] += 1
 
-def kruskal(n, edges):
+def kruskal(graph, n):
+    edges = []
+    for u in graph:
+        for v, weight in graph[u]:
+            if u < v:  # avoid double counting
+                edges.append((u, v, weight))
+
     edges.sort(key=lambda x: x[2])
+
     parent = [i for i in range(n)]
     rank = [0] * n
-    mst_cost = 0
+
     mst_edges = []
+    total_cost = 0
 
     for u, v, weight in edges:
         if find(parent, u) != find(parent, v):
             union(parent, rank, u, v)
-            mst_cost += weight
-            mst_edges.append((u, v))
+            mst_edges.append((u, v, weight))
+            total_cost += weight
 
-    return mst_cost, mst_edges
+    return total_cost, mst_edges
 
-# -----------------------------
-# Reconstruct Path from Dijkstra
-# -----------------------------
-def reconstruct_path(prev, start, end):
-    path = []
-    at = end
-    while at is not None:
-        path.append(at)
-        at = prev[at]
-    path.reverse()
-    return path if path[0] == start else []
-
-# -----------------------------
+# =====================
 # Merge Sort
-# -----------------------------
+# =====================
+
 def merge_sort(arr):
-    if len(arr) > 1:
-        mid = len(arr) // 2
-        left_half = arr[:mid]
-        right_half = arr[mid:]
+    if len(arr) <= 1:
+        return arr
 
-        merge_sort(left_half)
-        merge_sort(right_half)
+    mid = len(arr) // 2
+    left = merge_sort(arr[:mid])
+    right = merge_sort(arr[mid:])
 
-        i = j = k = 0
-        while i < len(left_half) and j < len(right_half):
-            if left_half[i] < right_half[j]:
-                arr[k] = left_half[i]
-                i += 1
-            else:
-                arr[k] = right_half[j]
-                j += 1
-            k += 1
+    return merge(left, right)
 
-        while i < len(left_half):
-            arr[k] = left_half[i]
+def merge(left, right):
+    result = []
+    i = j = 0
+
+    while i < len(left) and j < len(right):
+        if left[i] < right[j]:
+            result.append(left[i])
             i += 1
-            k += 1
-
-        while j < len(right_half):
-            arr[k] = right_half[j]
+        else:
+            result.append(right[j])
             j += 1
-            k += 1
 
-# -----------------------------
-# KMP Algorithm
-# -----------------------------
+    result.extend(left[i:])
+    result.extend(right[j:])
+    return result
+
+# =====================
+# Knuth-Morris-Pratt (KMP) String Matching
+# =====================
+
 def compute_lps(pattern):
-    m = len(pattern)
-    lps = [0] * m
+    lps = [0] * len(pattern)
     length = 0
     i = 1
 
-    while i < m:
+    while i < len(pattern):
         if pattern[i] == pattern[length]:
             length += 1
             lps[i] = length
@@ -151,42 +165,40 @@ def compute_lps(pattern):
             else:
                 lps[i] = 0
                 i += 1
+
     return lps
 
 def kmp_search(text, pattern):
-    n = len(text)
-    m = len(pattern)
     lps = compute_lps(pattern)
-    positions = []
     i = j = 0
 
-    while i < n:
+    while i < len(text):
         if pattern[j] == text[i]:
             i += 1
             j += 1
-        if j == m:
-            positions.append(i - j)
-            j = lps[j - 1]
-        elif i < n and pattern[j] != text[i]:
+
+        if j == len(pattern):
+            return True  # Found
+        elif i < len(text) and pattern[j] != text[i]:
             if j != 0:
                 j = lps[j - 1]
             else:
                 i += 1
-    return positions
 
-# -----------------------------
+    return False
+
+# =====================
 # Activity Selection Problem
-# -----------------------------
-def activity_selection(activities):
-    # activities: list of (start_time, end_time)
-    activities.sort(key=lambda x: x[1])  # Sort by end times
+# =====================
 
+def activity_selection(activities):
+    activities.sort(key=lambda x: x[1])  # Sort by end times
     selected = []
-    last_end_time = -1
+    last_end = -1
 
     for start, end in activities:
-        if start >= last_end_time:
+        if start >= last_end:
             selected.append((start, end))
-            last_end_time = end
+            last_end = end
 
     return selected
