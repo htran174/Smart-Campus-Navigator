@@ -1,5 +1,3 @@
-# gui_base_app.py
-
 import tkinter as tk
 from tkinter import ttk, messagebox
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
@@ -148,12 +146,20 @@ def run_gui():
 
     tk.Label(task_frame, text="📅 Task Scheduling", font=("Arial", 12, "bold")).pack(pady=10)
     tk.Button(task_frame, text="Add Task", command=open_task_popup).pack(pady=5)
+    tk.Button(task_frame, text="Sort", command=lambda: None).pack(pady=5)
+
 
     tk.Label(control_frame, text="🗺️ Path Finder", font=("Arial", 12, "bold")).pack(pady=10)
     tk.Button(control_frame, text="Set Start and End", command=open_input_popup).pack(pady=10)
     tk.Button(control_frame, text="Highlight Shortest Path", command=simulate_path).pack(pady=10)
 
+
+
     root.mainloop()
+
+# Entry point
+if __name__ == "__main__":
+    run_gui()
 
 # Entry point
 if __name__ == "__main__":
