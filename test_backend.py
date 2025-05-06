@@ -1,6 +1,8 @@
 # test_backend.py
 
 import backend
+from datetime import datetime
+
 
 def test_shortest_paths():
     print("Testing Shortest Paths:\n")
@@ -35,7 +37,27 @@ def test_mst_kruskal():
         print(f"{u} <--> {v} ({weight} mins)")
     print(f"Total time to connect campus (Kruskal): {total_cost} mins\n")
 
+def test_sort_tasks():
+    print("\nTesting Task Sorting:\n")
+
+    tasks = [
+        (datetime(2025,5,5,12,0), datetime(2025,5,5,13,0), "Library"),
+        (datetime(2025,5,5,9,0), datetime(2025,5,5,10,0), "TSU"),
+        (datetime(2025,5,5,10,30), datetime(2025,5,5,11,30), "Rec Center")
+    ]
+
+    print("Before Sorting:")
+    for start, end, location in tasks:
+        print(f"{start.strftime('%H:%M')} - {end.strftime('%H:%M')} @ {location}")
+
+    sorted_tasks = backend.sort_tasks(tasks)
+
+    print("\nAfter Sorting:")
+    for start, end, location in sorted_tasks:
+        print(f"{start.strftime('%H:%M')} - {end.strftime('%H:%M')} @ {location}")
+
 if __name__ == "__main__":
-    test_shortest_paths()
-    test_mst_prim()
-    test_mst_kruskal()
+    #test_shortest_paths()
+    #test_mst_prim()
+    #test_mst_kruskal()
+    test_sort_tasks()
