@@ -1,7 +1,7 @@
 # backend.py
 
 from map import campus_graph, building_names
-from algro import dijkstra, prim, kruskal
+from algro import dijkstra, prim, kruskal, merge_sort
 
 # Helper Functions for id to names
 def building_name_to_index(name):
@@ -44,3 +44,23 @@ def build_mst_kruskal():
     total_cost, mst_edges = kruskal(campus_graph, n)
     readable_edges = [(building_index_to_name(u), building_index_to_name(v), weight) for u, v, weight in mst_edges]
     return readable_edges, total_cost
+
+def sort_tasks(tasks):
+    """
+    Sort a list of tasks based on start time.
+    Each task is a tuple: (start_time, end_time, location)
+    """
+    if not tasks:
+        return []
+
+    # Create a list of (start_time, task) for sorting
+    tasks_with_key = [(task[0], task) for task in tasks]
+
+    # Use merge sort on start times
+    sorted_by_start = merge_sort(tasks_with_key)
+
+    # Extract the sorted tasks
+    sorted_tasks = [task for _, task in sorted_by_start]
+
+    return sorted_tasks
+
