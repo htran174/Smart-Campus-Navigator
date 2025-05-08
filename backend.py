@@ -47,20 +47,44 @@ def build_mst_kruskal():
 
 def sort_tasks(tasks):
     """
-    Sort a list of tasks based on start time.
-    Each task is a tuple: (start_time, end_time, location)
+    Sorts tasks first by (importance descending), then by (start time ascending).
     """
     if not tasks:
         return []
 
-    # Create a list of (start_time, task) for sorting
-    tasks_with_key = [(task[0], task) for task in tasks]
+    tasks_with_key = [((-task[3], task[0].hour * 60 + task[0].minute), task) for task in tasks]
 
-    # Use merge sort on start times
-    sorted_by_start = merge_sort(tasks_with_key)
+    sorted_tasks = merge_sort(tasks_with_key)
 
-    # Extract the sorted tasks
-    sorted_tasks = [task for _, task in sorted_by_start]
+    return [task for _, task in sorted_tasks]
 
-    return sorted_tasks
+
+def schedule_tasks(tasks):
+    """
+    Greedy scheduling of tasks, preferring higher importance.
+    """
+    if not tasks:
+        return []
+
+    # Step 1: Preprocess activities
+    activities = []
+    for task in tasks:
+        start_min = task[0].hour * 60 + task[0].minute
+        end_min = task[1].hour * 60 + task[1].minute
+        importance = task[3]  # Now an integer
+        activities.append((importance, start_min, end_min, task))
+
+    # Step 2: Sort by (importance DESC, end time ASC)
+    activities.sort(key=lambda x: (-x[0], x[2]))
+
+    # Step 3: Greedy select
+    selected = []
+    last_end_time = -1
+
+    for imp, start, end, task in activities:
+        if start >= last_end_time:
+            selected.append(task)
+            last_end_time = end
+
+    return selected
 

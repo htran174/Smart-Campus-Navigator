@@ -38,26 +38,46 @@ def test_mst_kruskal():
     print(f"Total time to connect campus (Kruskal): {total_cost} mins\n")
 
 def test_sort_tasks():
-    print("\nTesting Task Sorting:\n")
+    print("\nTesting Task Sorting (by Importance then Start Time):\n")
 
     tasks = [
-        (datetime(2025,5,5,12,0), datetime(2025,5,5,13,0), "Library"),
-        (datetime(2025,5,5,9,0), datetime(2025,5,5,10,0), "TSU"),
-        (datetime(2025,5,5,10,30), datetime(2025,5,5,11,30), "Rec Center")
+        (datetime(2025,5,5,12,0), datetime(2025,5,5,13,0), "Library", 1, "Study"),   # Low
+        (datetime(2025,5,5,9,0), datetime(2025,5,5,10,0), "TSU", 3, "Club Meeting"), # High
+        (datetime(2025,5,5,10,30), datetime(2025,5,5,11,30), "Rec Center", 2, "Gym") # Normal
     ]
 
     print("Before Sorting:")
-    for start, end, location in tasks:
-        print(f"{start.strftime('%H:%M')} - {end.strftime('%H:%M')} @ {location}")
+    for start, end, location, importance, desc in tasks:
+        print(f"{start.strftime('%H:%M')} - {end.strftime('%H:%M')} @ {location} [{importance}] {desc}")
 
     sorted_tasks = backend.sort_tasks(tasks)
 
     print("\nAfter Sorting:")
-    for start, end, location in sorted_tasks:
-        print(f"{start.strftime('%H:%M')} - {end.strftime('%H:%M')} @ {location}")
+    for start, end, location, importance, desc in sorted_tasks:
+        print(f"{start.strftime('%H:%M')} - {end.strftime('%H:%M')} @ {location} [{importance}] {desc}")
+
+def test_schedule_tasks():
+    print("\nTesting Task Scheduling (Greedy, Prefer Higher Importance):\n")
+
+    tasks = [
+        (datetime(2025,5,5,9,0), datetime(2025,5,5,12,0), "Library", 2, "Study"),     # Normal
+        (datetime(2025,5,5,10,0), datetime(2025,5,5,11,0), "TSU", 3, "Club Meeting"), # High (overlaps)
+        (datetime(2025,5,5,12,0), datetime(2025,5,5,13,0), "Rec Center", 1, "Workout")# Low
+    ]
+
+    print("Before Scheduling:")
+    for start, end, location, importance, desc in tasks:
+        print(f"{start.strftime('%H:%M')} - {end.strftime('%H:%M')} @ {location} [{importance}] {desc}")
+
+    scheduled_tasks = backend.schedule_tasks(tasks)
+
+    print("\nAfter Scheduling (Selected Non-Overlapping Tasks):")
+    for start, end, location, importance, desc in scheduled_tasks:
+        print(f"{start.strftime('%H:%M')} - {end.strftime('%H:%M')} @ {location} [{importance}] {desc}")
 
 if __name__ == "__main__":
     #test_shortest_paths()
     #test_mst_prim()
     #test_mst_kruskal()
     test_sort_tasks()
+    test_schedule_tasks()
