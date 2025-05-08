@@ -17,7 +17,7 @@ G.add_edge("TSU", "PL", weight=2)
 
 positions = nx.spring_layout(G, seed=42)
 
-# Store tasks as (start_time, end_time, description)
+# Store tasks as (start_time, end_time, location, importance, description)
 tasks = []
 
 def run_gui():
@@ -35,13 +35,10 @@ def run_gui():
         ax.clear()
         nx.draw(G, pos=positions, ax=ax, with_labels=True, node_color='lightblue', node_size=800, font_size=10)
         nx.draw_networkx_edge_labels(G, pos=positions, edge_labels=nx.get_edge_attributes(G, 'weight'), ax=ax)
-
         if highlight_nodes:
             nx.draw_networkx_nodes(G, pos=positions, nodelist=highlight_nodes, node_color='orange', node_size=800, ax=ax)
-
         if path_edges:
             nx.draw_networkx_edges(G, pos=positions, edgelist=path_edges, edge_color='red', width=3, ax=ax)
-
         canvas.draw()
 
     draw_graph()
@@ -83,7 +80,6 @@ def run_gui():
         if not current["start"] or not current["end"]:
             messagebox.showwarning("Missing", "Please set both start and end locations.")
             return
-
         try:
             path = nx.shortest_path(G, source=current["start"], target=current["end"], weight='weight')
             path_edges = list(zip(path, path[1:]))
@@ -94,7 +90,7 @@ def run_gui():
     def open_task_popup():
         popup = tk.Toplevel(root)
         popup.title("Add Task")
-        popup.geometry("300x250")
+        popup.geometry("300x400")
 
         tk.Label(popup, text="Start Time (e.g. 9 or 09:00):").pack()
         start_entry = tk.Entry(popup)
@@ -103,6 +99,14 @@ def run_gui():
         tk.Label(popup, text="End Time (e.g. 10 or 10:30):").pack()
         end_entry = tk.Entry(popup)
         end_entry.pack()
+
+        tk.Label(popup, text="Location:").pack()
+        location_cb = ttk.Combobox(popup, values=list(G.nodes), state="readonly")
+        location_cb.pack()
+
+        tk.Label(popup, text="Importance:").pack()
+        importance_cb = ttk.Combobox(popup, values=["Low (1)", "Normal (2)", "High (3)"], state="readonly")
+        importance_cb.pack()
 
         tk.Label(popup, text="Task Description:").pack()
         content_entry = tk.Entry(popup)
@@ -118,6 +122,8 @@ def run_gui():
             try:
                 start_str = start_entry.get().strip()
                 end_str = end_entry.get().strip()
+                location = location_cb.get().strip()
+                importance_text = importance_cb.get().strip()
                 content = content_entry.get().strip()
 
                 start_time = parse_time(start_str)
@@ -127,8 +133,14 @@ def run_gui():
                     raise ValueError("End time must be after start time.")
                 if not content:
                     raise ValueError("Please enter a task description.")
+                if not location:
+                    raise ValueError("Please select a location.")
+                if not importance_text:
+                    raise ValueError("Please select importance.")
 
-                tasks.append((start_time, end_time, content))
+                importance_value = int(importance_text.split('(')[-1].strip(')'))
+
+                tasks.append((start_time, end_time, location, importance_value, content))
                 update_calendar_view()
                 popup.destroy()
             except Exception as e:
@@ -139,21 +151,18 @@ def run_gui():
     def update_calendar_view():
         for widget in calendar_frame.winfo_children():
             widget.destroy()
-        tk.Label(calendar_frame, text="🕒 Task Time View", font=("Arial", 11, "bold")).pack(pady=5)
-        for start, end, content in tasks:
-            label = f"{start.strftime('%H:%M')} - {end.strftime('%H:%M')}  {content}"
-            tk.Label(calendar_frame, text=label, bg="lightyellow", width=40, relief=tk.RIDGE, anchor="w").pack(pady=2, padx=5)
+        tk.Label(calendar_frame, text="Task Time View", font=("Arial", 11, "bold")).pack(pady=5)
+        for start, end, location, importance, content in tasks:
+            label = f"{start.strftime('%H:%M')} - {end.strftime('%H:%M')}  ({location}, {importance}) {content}"
+            tk.Label(calendar_frame, text=label, bg="lightyellow", width=45, relief=tk.RIDGE, anchor="w").pack(pady=2, padx=5)
 
-    tk.Label(task_frame, text="📅 Task Scheduling", font=("Arial", 12, "bold")).pack(pady=10)
+    tk.Label(task_frame, text="Task Scheduling", font=("Arial", 12, "bold")).pack(pady=10)
     tk.Button(task_frame, text="Add Task", command=open_task_popup).pack(pady=5)
     tk.Button(task_frame, text="Sort", command=lambda: None).pack(pady=5)
 
-
-    tk.Label(control_frame, text="🗺️ Path Finder", font=("Arial", 12, "bold")).pack(pady=10)
+    tk.Label(control_frame, text="Path Finder", font=("Arial", 12, "bold")).pack(pady=10)
     tk.Button(control_frame, text="Set Start and End", command=open_input_popup).pack(pady=10)
     tk.Button(control_frame, text="Highlight Shortest Path", command=simulate_path).pack(pady=10)
-
-
 
     root.mainloop()
 
@@ -161,6 +170,3 @@ def run_gui():
 if __name__ == "__main__":
     run_gui()
 
-# Entry point
-if __name__ == "__main__":
-    run_gui()
