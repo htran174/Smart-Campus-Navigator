@@ -47,16 +47,22 @@ def build_mst_kruskal():
 
 def sort_tasks(tasks):
     """
-    Sorts tasks first by (importance descending), then by (start time ascending).
+    Sort tasks by start time only.
+    Keeps all overlapping tasks.
+    Used for display and user review.
     """
     if not tasks:
         return []
 
-    tasks_with_key = [((-task[3], task[0].hour * 60 + task[0].minute), task) for task in tasks]
+    def start_time_key(task):
+        return task[0].hour * 60 + task[0].minute
 
-    sorted_tasks = merge_sort(tasks_with_key)
+    # Wrap with keys for merge sort
+    tasks_with_keys = [(start_time_key(task), task) for task in tasks]
+    sorted_pairs = merge_sort(tasks_with_keys)
 
-    return [task for _, task in sorted_tasks]
+    # Extract and return sorted tasks only
+    return [task for _, task in sorted_pairs]
 
 
 def schedule_tasks(tasks):

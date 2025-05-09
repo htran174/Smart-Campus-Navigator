@@ -75,9 +75,30 @@ def test_schedule_tasks():
     for start, end, location, importance, desc in scheduled_tasks:
         print(f"{start.strftime('%H:%M')} - {end.strftime('%H:%M')} @ {location} [{importance}] {desc}")
 
+
+def test_sort_tasks_with_overlap():
+    print("\n🔍 Testing sort_tasks() — Keeps Overlapping Tasks, Sorted by Start Time:\n")
+
+    tasks = [
+        (datetime(2025, 5, 5, 10, 0), datetime(2025, 5, 5, 11, 0), "TSU", 3, "Club Meeting"),
+        (datetime(2025, 5, 5, 9, 0), datetime(2025, 5, 5, 12, 0), "Library", 2, "Study Session"),
+        (datetime(2025, 5, 5, 12, 0), datetime(2025, 5, 5, 13, 0), "Rec Center", 1, "Workout")
+    ]
+
+    print("📋 Original Task Order:")
+    for start, end, loc, imp, desc in tasks:
+        print(f"{start.strftime('%H:%M')}–{end.strftime('%H:%M')} @ {loc} [{imp}] {desc}")
+
+    sorted_tasks = backend.sort_tasks(tasks)
+
+    print("\n✅ Sorted by Start Time (Overlaps Allowed):")
+    for start, end, loc, imp, desc in sorted_tasks:
+        print(f"{start.strftime('%H:%M')}–{end.strftime('%H:%M')} @ {loc} [{imp}] {desc}")
+
 if __name__ == "__main__":
     #test_shortest_paths()
     #test_mst_prim()
     #test_mst_kruskal()
-    test_sort_tasks()
-    test_schedule_tasks()
+    #test_sort_tasks()
+    #test_schedule_tasks()
+    test_sort_tasks_with_overlap()
