@@ -66,31 +66,25 @@ def sort_tasks(tasks):
 
 
 def schedule_tasks(tasks):
-    """
-    Greedy scheduling of tasks, preferring higher importance.
-    """
     if not tasks:
         return []
 
-    # Step 1: Preprocess activities
-    activities = []
+    # Enrich with comparable minutes
+    enriched = []
     for task in tasks:
-        start_min = task[0].hour * 60 + task[0].minute
-        end_min = task[1].hour * 60 + task[1].minute
-        importance = task[3]  # Now an integer
-        activities.append((importance, start_min, end_min, task))
+        start = task[0].hour * 60 + task[0].minute
+        end = task[1].hour * 60 + task[1].minute
+        enriched.append((task[3], end, start, task))  # importance, end time, start time, full
 
-    # Step 2: Sort by (importance DESC, end time ASC)
-    activities.sort(key=lambda x: (-x[0], x[2]))
+    # Sort by end time first (core of activity selection), then by -importance to favor better tasks when tied
+    enriched.sort(key=lambda x: (x[1], -x[0]))
 
-    # Step 3: Greedy select
-    selected = []
-    last_end_time = -1
+    result = []
+    last_end = -1
 
-    for imp, start, end, task in activities:
-        if start >= last_end_time:
-            selected.append(task)
-            last_end_time = end
+    for imp, end, start, task in enriched:
+        if start >= last_end:
+            result.append(task)
+            last_end = end
 
-    return selected
-
+    return sorted(result, key=lambda x: x[0])
