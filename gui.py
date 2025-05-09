@@ -43,10 +43,10 @@ def run_gui():
     control_frame.pack(side=tk.LEFT, fill=tk.Y, padx=10, pady=10)
 
     task_frame = tk.Frame(root, relief=tk.GROOVE, bd=2)
-    task_frame.pack(side=tk.RIGHT, fill=tk.Y, padx=10, pady=10)
+    task_frame.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True, padx=10, pady=10)
 
-    calendar_frame = tk.Frame(task_frame)
-    calendar_frame.pack(pady=10, fill="both", expand=True)
+    calendar_frame = tk.Frame(task_frame, relief=tk.SUNKEN, bd=2)
+    calendar_frame.pack(side=tk.BOTTOM, pady=10, fill="both", expand=True)
 
     def open_input_popup():
         popup = tk.Toplevel(root)
@@ -140,18 +140,32 @@ def run_gui():
         update_calendar_view()
 
     def show_schedule():
-        scheduled = schedule_tasks(tasks)
-        msg = "\n".join(f"{t[0].strftime('%H:%M')} - {t[1].strftime('%H:%M')} ({t[2]}, {t[3]}) {t[4]}" for t in scheduled)
-        messagebox.showinfo("Scheduled Tasks", msg or "No tasks could be scheduled.")
+        global tasks
+        tasks = schedule_tasks(tasks)
+        update_calendar_view()
 
-    tk.Label(task_frame, text="Task Scheduling", font=("Arial", 12, "bold")).pack(pady=10)
-    tk.Button(task_frame, text="Add Task", command=open_task_popup).pack(pady=5)
-    tk.Button(task_frame, text="Sort Tasks", command=show_sorted).pack(pady=5)
-    tk.Button(task_frame, text="Schedule Tasks", command=show_schedule).pack(pady=5)
+    top_task_frame = tk.Frame(task_frame, relief=tk.GROOVE, bd=2)
+    top_task_frame.pack(side=tk.TOP, anchor="n", pady=10)
+
+    tk.Label(top_task_frame, text="Task Scheduling", font=("Arial", 12, "bold")).pack(pady=5)
+    tk.Button(top_task_frame, text="Add Task", command=open_task_popup).pack(pady=2)
+    tk.Button(top_task_frame, text="Sort Tasks", command=show_sorted).pack(pady=2)
+    tk.Button(top_task_frame, text="Schedule Tasks", command=show_schedule).pack(pady=2)
 
     tk.Label(control_frame, text="Path Finder", font=("Arial", 12, "bold")).pack(pady=10)
     tk.Button(control_frame, text="Set Start and End", command=open_input_popup).pack(pady=10)
     tk.Button(control_frame, text="Highlight Shortest Path", command=simulate_path).pack(pady=10)
+
+    def highlight_mst():
+        mst_edges, _ = build_mst()
+        edge_indices = [(building_names.index(u), building_names.index(v)) for u, v, _ in mst_edges]
+        draw_graph(path_edges=edge_indices)
+
+    def reset_graph():
+        draw_graph()
+
+    tk.Button(control_frame, text="Show MST (Prim)", command=highlight_mst).pack(pady=5)
+    tk.Button(control_frame, text="Reset Graph", command=reset_graph).pack(pady=5)
 
     root.mainloop()
 
