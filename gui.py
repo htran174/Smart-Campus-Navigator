@@ -5,27 +5,18 @@ import matplotlib.pyplot as plt
 import networkx as nx
 from datetime import datetime
 
-# ====== Campus graph definition ======
-G = nx.Graph()
-G.add_edge("SRC", "KHS", weight=5)
-G.add_edge("KHS", "PL", weight=2)
-G.add_edge("PL", "MH", weight=1)
-G.add_edge("MH", "DBH", weight=3)
-G.add_edge("PL", "EC", weight=4)
-G.add_edge("SRC", "TSU", weight=7)
-G.add_edge("TSU", "PL", weight=2)
+from map import campus_graph, building_names
+from backend import find_shortest_path, build_mst, build_mst_kruskal, sort_tasks, schedule_tasks
+from visualize import pos as positions
 
-positions = nx.spring_layout(G, seed=42)
-
-# Store tasks as (start_time, end_time, location, importance, description)
 tasks = []
+current = {"start": None, "end": None}
 
 def run_gui():
     root = tk.Tk()
     root.title("CSUF Campus Navigator")
     root.geometry("1200x600")
 
-    # Graph display area
     fig = plt.Figure(figsize=(5, 4), dpi=100)
     ax = fig.add_subplot(111)
     canvas = FigureCanvasTkAgg(fig, master=root)
@@ -33,7 +24,12 @@ def run_gui():
 
     def draw_graph(highlight_nodes=None, path_edges=None):
         ax.clear()
-        nx.draw(G, pos=positions, ax=ax, with_labels=True, node_color='lightblue', node_size=800, font_size=10)
+        G = nx.Graph()
+        for u in campus_graph:
+            for v, w in campus_graph[u]:
+                G.add_edge(u, v, weight=w)
+        nx.draw(G, pos=positions, ax=ax, with_labels=True, node_color='lightblue', node_size=800, font_size=8,
+                labels={i: name for i, name in enumerate(building_names)})
         nx.draw_networkx_edge_labels(G, pos=positions, edge_labels=nx.get_edge_attributes(G, 'weight'), ax=ax)
         if highlight_nodes:
             nx.draw_networkx_nodes(G, pos=positions, nodelist=highlight_nodes, node_color='orange', node_size=800, ax=ax)
@@ -43,7 +39,6 @@ def run_gui():
 
     draw_graph()
 
-    # Control Panel
     control_frame = tk.Frame(root)
     control_frame.pack(side=tk.LEFT, fill=tk.Y, padx=10, pady=10)
 
@@ -53,25 +48,23 @@ def run_gui():
     calendar_frame = tk.Frame(task_frame)
     calendar_frame.pack(pady=10, fill="both", expand=True)
 
-    current = {"start": None, "end": None}
-
     def open_input_popup():
         popup = tk.Toplevel(root)
         popup.title("Select Start and End")
         popup.geometry("300x200")
 
         tk.Label(popup, text="Start Location:").pack(pady=5)
-        start_cb = ttk.Combobox(popup, values=list(G.nodes), state="readonly")
+        start_cb = ttk.Combobox(popup, values=building_names, state="readonly")
         start_cb.pack()
 
         tk.Label(popup, text="End Location:").pack(pady=5)
-        end_cb = ttk.Combobox(popup, values=list(G.nodes), state="readonly")
+        end_cb = ttk.Combobox(popup, values=building_names, state="readonly")
         end_cb.pack()
 
         def submit():
             current["start"] = start_cb.get()
             current["end"] = end_cb.get()
-            draw_graph(highlight_nodes=[current["start"], current["end"]])
+            draw_graph()
             popup.destroy()
 
         tk.Button(popup, text="Confirm", command=submit).pack(pady=10)
@@ -80,11 +73,12 @@ def run_gui():
         if not current["start"] or not current["end"]:
             messagebox.showwarning("Missing", "Please set both start and end locations.")
             return
-        try:
-            path = nx.shortest_path(G, source=current["start"], target=current["end"], weight='weight')
-            path_edges = list(zip(path, path[1:]))
-            draw_graph(highlight_nodes=path, path_edges=path_edges)
-        except nx.NetworkXNoPath:
+        path, _ = find_shortest_path(current["start"], current["end"])
+        if path:
+            indices = [building_names.index(name) for name in path]
+            path_edges = list(zip(indices, indices[1:]))
+            draw_graph(highlight_nodes=indices, path_edges=path_edges)
+        else:
             messagebox.showerror("Error", "No path found between the selected nodes.")
 
     def open_task_popup():
@@ -101,7 +95,7 @@ def run_gui():
         end_entry.pack()
 
         tk.Label(popup, text="Location:").pack()
-        location_cb = ttk.Combobox(popup, values=list(G.nodes), state="readonly")
+        location_cb = ttk.Combobox(popup, values=building_names, state="readonly")
         location_cb.pack()
 
         tk.Label(popup, text="Importance:").pack()
@@ -113,34 +107,18 @@ def run_gui():
         content_entry.pack()
 
         def parse_time(text):
-            if ":" in text:
-                return datetime.strptime(text, "%H:%M")
-            else:
-                return datetime.strptime(text.zfill(2) + ":00", "%H:%M")
+            return datetime.strptime(text.strip().zfill(5) if ':' in text else text.zfill(2)+":00", "%H:%M")
 
         def add_task():
             try:
-                start_str = start_entry.get().strip()
-                end_str = end_entry.get().strip()
-                location = location_cb.get().strip()
-                importance_text = importance_cb.get().strip()
-                content = content_entry.get().strip()
-
-                start_time = parse_time(start_str)
-                end_time = parse_time(end_str)
-
+                start_time = parse_time(start_entry.get())
+                end_time = parse_time(end_entry.get())
+                location = location_cb.get()
+                importance_value = int(importance_cb.get().split('(')[-1][0])
+                description = content_entry.get()
                 if end_time <= start_time:
                     raise ValueError("End time must be after start time.")
-                if not content:
-                    raise ValueError("Please enter a task description.")
-                if not location:
-                    raise ValueError("Please select a location.")
-                if not importance_text:
-                    raise ValueError("Please select importance.")
-
-                importance_value = int(importance_text.split('(')[-1].strip(')'))
-
-                tasks.append((start_time, end_time, location, importance_value, content))
+                tasks.append((start_time, end_time, location, importance_value, description))
                 update_calendar_view()
                 popup.destroy()
             except Exception as e:
@@ -152,13 +130,24 @@ def run_gui():
         for widget in calendar_frame.winfo_children():
             widget.destroy()
         tk.Label(calendar_frame, text="Task Time View", font=("Arial", 11, "bold")).pack(pady=5)
-        for start, end, location, importance, content in tasks:
-            label = f"{start.strftime('%H:%M')} - {end.strftime('%H:%M')}  ({location}, {importance}) {content}"
+        for start, end, loc, imp, desc in tasks:
+            label = f"{start.strftime('%H:%M')} - {end.strftime('%H:%M')} ({loc}, {imp}) {desc}"
             tk.Label(calendar_frame, text=label, bg="lightyellow", width=45, relief=tk.RIDGE, anchor="w").pack(pady=2, padx=5)
+
+    def show_sorted():
+        global tasks
+        tasks = sort_tasks(tasks)
+        update_calendar_view()
+
+    def show_schedule():
+        scheduled = schedule_tasks(tasks)
+        msg = "\n".join(f"{t[0].strftime('%H:%M')} - {t[1].strftime('%H:%M')} ({t[2]}, {t[3]}) {t[4]}" for t in scheduled)
+        messagebox.showinfo("Scheduled Tasks", msg or "No tasks could be scheduled.")
 
     tk.Label(task_frame, text="Task Scheduling", font=("Arial", 12, "bold")).pack(pady=10)
     tk.Button(task_frame, text="Add Task", command=open_task_popup).pack(pady=5)
-    tk.Button(task_frame, text="Sort", command=lambda: None).pack(pady=5)
+    tk.Button(task_frame, text="Sort Tasks", command=show_sorted).pack(pady=5)
+    tk.Button(task_frame, text="Schedule Tasks", command=show_schedule).pack(pady=5)
 
     tk.Label(control_frame, text="Path Finder", font=("Arial", 12, "bold")).pack(pady=10)
     tk.Button(control_frame, text="Set Start and End", command=open_input_popup).pack(pady=10)
@@ -166,7 +155,5 @@ def run_gui():
 
     root.mainloop()
 
-# Entry point
 if __name__ == "__main__":
     run_gui()
-
