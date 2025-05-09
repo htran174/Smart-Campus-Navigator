@@ -12,6 +12,11 @@ from visualize import pos as positions
 tasks = []
 current = {"start": None, "end": None}
 
+# Animation state
+current_step = 0
+scheduled_path = []
+animation_running = False
+
 def run_gui():
     root = tk.Tk()
     root.title("CSUF Campus Navigator")
@@ -135,15 +140,26 @@ def run_gui():
             label = f"{start.strftime('%H:%M')} - {end.strftime('%H:%M')} ({loc}, {imp}) {desc}"
             tk.Label(calendar_frame, text=label, bg="lightyellow", width=45, relief=tk.RIDGE, anchor="w").pack(pady=2, padx=5)
 
+    def update_calendar_with_schedule(scheduled_list):
+        for widget in calendar_frame.winfo_children():
+            widget.destroy()
+        tk.Label(calendar_frame, text="Scheduled Tasks View", font=("Arial", 11, "bold")).pack(pady=5)
+
+        for start, end, loc, imp, desc in scheduled_list:
+            label = f"{start.strftime('%H:%M')} - {end.strftime('%H:%M')} ({loc}, {imp}) {desc}"
+            tk.Label(calendar_frame, text=label, bg="lightgreen", width=45, relief=tk.RIDGE, anchor="w").pack(pady=2, padx=5)
+
+    def show_all_tasks():
+        update_calendar_view()
+
     def show_sorted():
         global tasks
         tasks = sort_tasks(tasks)
         update_calendar_view()
 
     def show_schedule():
-        global tasks
-        tasks = schedule_tasks(tasks)
-        update_calendar_view()
+        scheduled = schedule_tasks(tasks)  # Don’t overwrite the full task list
+        update_calendar_with_schedule(scheduled)   # Show only scheduled tasks
 
     def clear_all_tasks():
         global tasks
@@ -153,12 +169,15 @@ def run_gui():
     top_task_frame = tk.Frame(task_frame, relief=tk.GROOVE, bd=2)
     top_task_frame.pack(side=tk.TOP, anchor="n", pady=10)
 
+    #left panal
     tk.Label(top_task_frame, text="Task Scheduling", font=("Arial", 12, "bold")).pack(pady=5)
     tk.Button(top_task_frame, text="Add Task", command=open_task_popup).pack(pady=2)
     tk.Button(top_task_frame, text="Sort Tasks", command=show_sorted).pack(pady=2)
     tk.Button(top_task_frame, text="Schedule Tasks", command=show_schedule).pack(pady=2)
     tk.Button(top_task_frame, text="Clear Tasks", command=clear_all_tasks).pack(pady=2)
+    tk.Button(top_task_frame, text="Show All Tasks", command=show_all_tasks).pack(pady=2)
 
+    #right panal
     tk.Label(control_frame, text="Path Finder", font=("Arial", 12, "bold")).pack(pady=10)
     tk.Button(control_frame, text="Set Start and End", command=open_input_popup).pack(pady=10)
     tk.Button(control_frame, text="Highlight Shortest Path", command=simulate_path).pack(pady=10)
@@ -188,6 +207,64 @@ def run_gui():
 
     tk.Button(control_frame, text="Show MST (Prim)", command=highlight_mst).pack(pady=5)
     tk.Button(control_frame, text="Reset Graph", command=reset_graph).pack(pady=5)
+
+    def animate_segment(start, end):
+        draw_graph(path_edges=[(start, end)])
+
+    def show_day():
+        global scheduled_path, current_step
+
+        scheduled = schedule_tasks(tasks)
+        scheduled.sort(key=lambda task: task[0])
+
+        scheduled_path = []
+
+        for i in range(len(scheduled) - 1):
+            start_building = scheduled[i][2]
+            end_building = scheduled[i + 1][2]
+            path, _ = find_shortest_path(start_building, end_building)
+
+            if path and len(path) >= 2:
+                indices = [building_names.index(name) for name in path]
+                path_edges = list(zip(indices, indices[1:]))
+                scheduled_path.append(path_edges)
+
+        current_step = 0
+        show_current_step()  
+
+    def step_through_day():
+        global current_step, animation_running
+
+        if not animation_running or current_step >= len(scheduled_path):
+            return
+
+        path_edges = scheduled_path[current_step]  # ✅ use entire list of edges
+        draw_graph(path_edges=path_edges)
+
+        current_step += 1
+        root.after(1500, step_through_day)
+
+    def show_current_step():
+        global current_step
+        if 0 <= current_step < len(scheduled_path):
+            path_edges = scheduled_path[current_step]
+            draw_graph(path_edges=path_edges)
+
+    def next_task_path():
+        global current_step
+        if current_step < len(scheduled_path) - 1:
+            current_step += 1
+            show_current_step()
+
+    def prev_task_path():
+        global current_step
+        if current_step > 0:
+            current_step -= 1
+            show_current_step()
+            
+    tk.Button(top_task_frame, text="Show Day", command=show_day).pack(pady=2)
+    tk.Button(top_task_frame, text="Next", command=next_task_path).pack(pady=2)
+    tk.Button(top_task_frame, text="Prev", command=prev_task_path).pack(pady=2)
 
     root.mainloop()
 
