@@ -126,6 +126,7 @@ def run_gui():
 
         tk.Button(popup, text="Add", command=add_task).pack(pady=10)
 
+
     def update_calendar_view():
         for widget in calendar_frame.winfo_children():
             widget.destroy()
@@ -144,6 +145,11 @@ def run_gui():
         tasks = schedule_tasks(tasks)
         update_calendar_view()
 
+    def clear_all_tasks():
+        global tasks
+        tasks.clear()
+        update_calendar_view()
+        
     top_task_frame = tk.Frame(task_frame, relief=tk.GROOVE, bd=2)
     top_task_frame.pack(side=tk.TOP, anchor="n", pady=10)
 
@@ -151,15 +157,31 @@ def run_gui():
     tk.Button(top_task_frame, text="Add Task", command=open_task_popup).pack(pady=2)
     tk.Button(top_task_frame, text="Sort Tasks", command=show_sorted).pack(pady=2)
     tk.Button(top_task_frame, text="Schedule Tasks", command=show_schedule).pack(pady=2)
+    tk.Button(top_task_frame, text="Clear Tasks", command=clear_all_tasks).pack(pady=2)
 
     tk.Label(control_frame, text="Path Finder", font=("Arial", 12, "bold")).pack(pady=10)
     tk.Button(control_frame, text="Set Start and End", command=open_input_popup).pack(pady=10)
     tk.Button(control_frame, text="Highlight Shortest Path", command=simulate_path).pack(pady=10)
+    
 
     def highlight_mst():
+        # Get MST edges from backend (with building names)
         mst_edges, _ = build_mst()
-        edge_indices = [(building_names.index(u), building_names.index(v)) for u, v, _ in mst_edges]
-        draw_graph(path_edges=edge_indices)
+
+        # Redraw graph with ONLY MST edges
+        def filtered_draw():
+            ax.clear()
+            G_mst = nx.Graph()
+            for u, v, w in mst_edges:
+                G_mst.add_edge(building_names.index(u), building_names.index(v), weight=w)
+            nx.draw(G_mst, pos=positions, ax=ax, with_labels=True, node_color='lightblue', node_size=800, font_size=8,
+                    labels={i: name for i, name in enumerate(building_names)})
+            nx.draw_networkx_edge_labels(G_mst, pos=positions,
+                                        edge_labels={(building_names.index(u), building_names.index(v)): w for u, v, w in mst_edges},
+                                        ax=ax)
+            canvas.draw()
+
+        filtered_draw()
 
     def reset_graph():
         draw_graph()
